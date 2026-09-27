@@ -138,16 +138,16 @@ variables:
   program_unit: (?xi:block\s+data|function|module|program|subroutine|submodule|type|interface|type)
   construct_keyword: (?xi:associate|block(?!\s+data\b)|do|forall|if|select|where)
 
+  binary_digit: (?x:[01])
+  octal_digit: (?x:[0-7])
   hexadecimal_digit: (?xi:[0-9a-f])
+  binary_number: (?x:{{binary_digit}}+)
+  octal_number: (?x:{{octal_digit}}+)
   hexadecimal_number: (?xi:{{hexadecimal_digit}}+)
-  hexadecimal_string: (?xi:('|") {{hexadecimal_number}}+ ('|"))
-  octal_digit: (?xi:[0-8])
-  octal_number: (?xi:{{octal_digit}}+)
-  octal_string: (?xi:('|") {{octal_number}}+ ('|"))
-
-
-
-
+  # quote style must match: written out twice instead of using a backreference
+  binary_string: (?x:'{{binary_number}}'|"{{binary_number}}")
+  octal_string: (?x:'{{octal_number}}'|"{{octal_number}}")
+  hexadecimal_string: (?xi:'{{hexadecimal_number}}'|"{{hexadecimal_number}}")
 
 contexts:
   main:
@@ -1293,25 +1293,30 @@ contexts:
     # boolean literals
     - match: (?i:\.true\.|\.false\.)
       scope: constant.language.fortran
-    - match: |
-        (?xi:\b (X|Z) {{hexadecimal_string}}
-            |         {{hexadecimal_string}} (X|Z) \b
-            |      Z  {{hexadecimal_number}}       \b
-        )
-      scope: constant.numeric.hexadecimal.fortran
-    - match: |
-        (?xi:\b O {{octal_string}}
-            |     {{octal_string}} O \b
-        )
+    # BOZ literal constants: standard prefix forms
+    - match: (?xi:\b B {{binary_string}})
+      scope: constant.numeric.binary.fortran
+    - match: (?xi:\b O {{octal_string}})
       scope: constant.numeric.octal.fortran
+    - match: (?xi:\b Z {{hexadecimal_string}})
+      scope: constant.numeric.hexadecimal.fortran
+    - include: boz_extensions
 
+  boz_extensions:
+    # Non-standard BOZ spellings accepted by gfortran, Intel Fortran and others.
+    # Scoped with an extra ".extension" component so a colour scheme can
+    # highlight them differently or a stricter syntax variant can omit this context.
 
-
-
-
-
-
-
+    # X'...' as an alias for Z'...'
+    - match: (?xi:\b X {{hexadecimal_string}})
+      scope: constant.numeric.hexadecimal.extension.fortran
+    # suffix forms: '...'B  '...'O  '...'Z  '...'X
+    - match: (?xi:{{binary_string}} B \b)
+      scope: constant.numeric.binary.extension.fortran
+    - match: (?xi:{{octal_string}} O \b)
+      scope: constant.numeric.octal.extension.fortran
+    - match: (?xi:{{hexadecimal_string}} [XZ] \b)
+      scope: constant.numeric.hexadecimal.extension.fortran
 
 
 
